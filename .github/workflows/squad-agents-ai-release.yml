@@ -50,6 +50,7 @@ permissions:
 jobs:
   publish:
     name: Pack and publish NuGet package
+    if: github.repository == 'bradygaster/squad'
     runs-on: ubuntu-latest
     permissions:
       contents: read
