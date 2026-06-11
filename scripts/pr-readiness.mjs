@@ -243,6 +243,16 @@ export function checkCIStatus(checkRuns, statuses) {
   if (otherChecks.length === 0 && (statuses || []).length === 0) {
     return { pass: false, detail: 'No CI checks have run yet' };
   }
+  // Check legacy combined statuses for failure/error states
+  const failedStatuses = (statuses || []).filter(
+    (s) => s.state === 'failure' || s.state === 'error',
+  );
+  if (failedStatuses.length > 0) {
+    return {
+      pass: false,
+      detail: `${failedStatuses.length} status(es) failing: ${failedStatuses.map((s) => s.context).join(', ')}`,
+    };
+  }
   return { pass: true, detail: 'All checks passing' };
 }
 
@@ -312,7 +322,7 @@ export function buildFileList(files) {
 
   if (truncated) {
     const remaining = files.length - MAX_FILE_LIST;
-    rows.push(`| ... | **+${remaining} more files** | |`);
+    rows.push(`| ... | **+${remaining} more files** |`);
   }
 
   return [
@@ -442,11 +452,12 @@ export async function run({ env = process.env, fetchFn = globalThis.fetch } = {}
 
   let prLabels = [];
   try {
-    prLabels = JSON.parse(prLabelsRaw);
+    let parsed = JSON.parse(prLabelsRaw);
     // Handle double-serialized values (e.g. a JSON string of a JSON array).
-    if (typeof prLabels === 'string') {
-      prLabels = JSON.parse(prLabels);
+    if (typeof parsed === 'string') {
+      parsed = JSON.parse(parsed);
     }
+    prLabels = Array.isArray(parsed) ? parsed : [];
   } catch {
     prLabels = [];
   }

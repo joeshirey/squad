@@ -16,7 +16,7 @@ import { scrubEmails } from './email-scrub.js';
 import { getPackageVersion, stampVersion, readInstalledVersion } from './version.js';
 import { resolveSquadStateMcpSpec, type SquadStateMcpSpec } from './mcp-spec.js';
 export { resolveSquadStateMcpSpec } from './mcp-spec.js';
-import { ensureSquadStateMcpInRoot, tombstoneStaleSquadStateInProjectMcp } from './mcp-root.js';
+import { ensureSquadStateMcpInRoot, ensureSquadStateMcpInUserConfig, tombstoneStaleSquadStateInProjectMcp } from './mcp-root.js';
 
 const storage = new FSStorageProvider();
 
@@ -29,14 +29,37 @@ interface McpServerSpec {
   env?: Record<string, string>;
 }
 
+/**
+ * Returns true if the version looks like a local dev build or unpublished
+ * pre-release that cannot be resolved from the public npm registry.
+ * Guards against writing unresolvable version strings into MCP config
+ * (see #1204).
+ */
+export function isLocalOrUnpublishedVersion(version: string): boolean {
+  if (!version || version === '0.0.0') return true;
+  // Local linked builds often have 0.0.0-development or similar sentinel
+  if (/^0\.0\.0/.test(version)) return true;
+  // Versions with `+` build metadata (e.g. 0.10.0+local.1234) are not
+  // publishable to npm — they indicate a local build.
+  if (version.includes('+')) return true;
+  return false;
+}
+
 function buildMcpServerSpecs(isGitHub: boolean, cliVersion?: string): McpServerSpec[] {
   // Pin the squad-cli package to the currently-installed CLI version so that
   // `npx -y @bradygaster/squad-cli state-mcp` does NOT silently resolve to the
   // npm `latest` dist-tag (which may predate the `state-mcp` command and thus
   // expose zero tools to Copilot — see MCP-BRIDGE-BROKEN root cause).
-  const pkgSpec = cliVersion && cliVersion !== '0.0.0'
-    ? `@bradygaster/squad-cli@${cliVersion}`
-    : '@bradygaster/squad-cli';
+  //
+  // #1204: When the CLI is a local dev build or unpublished pre-release, fall
+  // back to the @insider dist-tag to avoid writing an unresolvable version
+  // string that breaks npx resolution at session start.
+  let pkgSpec: string;
+  if (!cliVersion || isLocalOrUnpublishedVersion(cliVersion)) {
+    pkgSpec = '@bradygaster/squad-cli@insider';
+  } else {
+    pkgSpec = `@bradygaster/squad-cli@${cliVersion}`;
+  }
   const servers: McpServerSpec[] = [
     {
       name: 'squad_state',
@@ -709,6 +732,15 @@ async function runEnsureChecks(dest: string, templatesDir: string, filesUpdated:
     }
   } catch (err) {
     warn(`Could not write .mcp.json: ${err instanceof Error ? err.message : err}`);
+  }
+  // Also pin to user-level config for external `copilot -p` compatibility
+  try {
+    const userResult = ensureSquadStateMcpInUserConfig(dest, pinnedSpec);
+    if (userResult.written) {
+      success(`pinned squad_state to ~/.copilot/mcp-config.json for \`copilot -p\` mode compatibility`);
+    }
+  } catch {
+    // best-effort: user-level config write failure does not block upgrade
   }
   const tomb = tombstoneStaleSquadStateInProjectMcp(dest);
   if (tomb.removed) {
