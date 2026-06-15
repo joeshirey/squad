@@ -169,7 +169,13 @@ jobs:
       - name: Build
         run: npm run build
       - name: Run tests
-        run: npm test
+        run: |
+          if [ "${{ github.repository }}" != "bradygaster/squad" ]; then
+            echo "Skipping docs verification tests on fork..."
+            npx vitest run --exclude 'test/docs-build.test.ts'
+          else
+            npm test
+          fi
 
   # Skip labels: skip-changelog, skip-exports-check, skip-samples-ci,
   # skip-workspace-check, skip-version-check, skip-export-smoke, large-deletion-approved
