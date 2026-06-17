@@ -104,7 +104,7 @@ describe('classifyFile', () => {
 // SquadObserver tests
 // ---------------------------------------------------------------------------
 
-describe('SquadObserver', () => {
+describe.sequential('SquadObserver', () => {
   let squadDir: string;
 
   beforeEach(() => {
@@ -156,6 +156,7 @@ describe('SquadObserver', () => {
   it('emits file_change span when a file is modified', async () => {
     const observer = new SquadObserver({ squadDir, debounceMs: 50 });
     observer.start();
+    await new Promise(r => setTimeout(r, 100)); // allow watcher to initialize
 
     // Write a file to trigger the watcher
     fs.writeFileSync(path.join(squadDir, 'agents', 'fenster', 'history.md'), 'test content');
@@ -182,6 +183,7 @@ describe('SquadObserver', () => {
 
     const observer = new SquadObserver({ squadDir, eventBus, debounceMs: 50 });
     observer.start();
+    await new Promise(r => setTimeout(r, 100)); // allow watcher to initialize
 
     fs.writeFileSync(path.join(squadDir, 'casting', 'registry.json'), '{}');
 

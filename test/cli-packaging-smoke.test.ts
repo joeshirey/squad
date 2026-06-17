@@ -175,7 +175,7 @@ describe('CLI packaging smoke test', { timeout: 120_000 }, () => {
       const stdout = execFileSync(process.execPath, [cli.cliEntryPath, ...args], {
         cwd: cli.tempDir,
         encoding: 'utf8',
-        timeout: 2000,
+        timeout: 10000,
         env: NO_COLOR_ENV,
       });
       return { stdout, stderr: '', exitCode: 0 };

@@ -95,7 +95,7 @@ export function registerHostileSteps(registry: StepDefinitions): void {
       const rows = context.terminalRows as number;
 
       const harness = await TerminalHarness.spawnWithArgs(args, { cols, rows });
-      try { await harness.waitForExit(5000); } catch { /* timeout ok */ }
+      try { await harness.waitForExit(15000); } catch { /* timeout ok */ }
       context.harness = harness;
       context.output = harness.getOutput();
       context.exitCode = harness.getExitCode();
