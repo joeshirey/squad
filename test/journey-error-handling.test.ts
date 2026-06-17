@@ -501,6 +501,7 @@ describe('Journey: Error messages are user-friendly', () => {
 
   it('unknown command error is conversational, not a stack trace', async () => {
     await shell.submit('/doesnotexist');
+    await shell.waitFor('Unknown command');
     const frame = shell.frame();
     expect(frame).toContain('Unknown command');
     expect(frame).toContain('/help');
@@ -512,6 +513,7 @@ describe('Journey: Error messages are user-friendly', () => {
   it('SDK not connected message provides actionable recovery steps', async () => {
     const noSdkShell = await createShellHarness({ noSdk: true });
     await noSdkShell.submit('build the feature');
+    await noSdkShell.waitFor('squad doctor');
     const frame = noSdkShell.frame();
 
     // Should contain numbered steps or helpful recovery suggestions

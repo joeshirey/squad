@@ -16,6 +16,7 @@ import {
   type UsageEvent,
 } from '@bradygaster/squad-sdk/runtime/streaming';
 
+
 // Mock otel-metrics to verify they're called
 vi.mock('@bradygaster/squad-sdk/runtime/otel-metrics', async (importOriginal) => {
   const orig = await importOriginal<typeof import('@bradygaster/squad-sdk/runtime/otel-metrics')>();

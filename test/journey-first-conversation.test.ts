@@ -172,7 +172,7 @@ async function createShellHarness(opts?: {
 // Journey: My First Conversation (#384)
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe('Journey: My first conversation (#384)', { timeout: 30_000 }, () => {
+describe.sequential('Journey: My first conversation (#384)', { timeout: 30_000 }, () => {
   let shell: ShellHarness;
 
   beforeEach(async () => {
@@ -360,7 +360,7 @@ describe('Journey: My first conversation (#384)', { timeout: 30_000 }, () => {
 
     it('@agent message appears in the conversation', async () => {
       await shell.submit('@Fenster write a unit test');
-      expect(shell.hasText('@Fenster write a unit test')).toBe(true);
+      await shell.waitFor('@Fenster write a unit test');
     });
 
     it('agent response to direct message appears in conversation', async () => {
