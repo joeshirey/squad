@@ -5,9 +5,8 @@
  * recovery, automatic reconnection, OTel instrumentation, and EventBus
  * integration.
  *
- * The provider is pluggable: by default a CopilotProvider is constructed
- * (preserving backward compatibility), but callers can inject any
- * SquadProvider implementation.
+ * The provider is pluggable: callers must inject a SquadProvider
+ * implementation. Copilot compatibility is disabled in this environment.
  *
  * @module adapter/client
  */
@@ -46,15 +45,13 @@ export type SquadConnectionState = 'disconnected' | 'connecting' | 'connected' |
  */
 export interface SquadClientOptions {
   /**
-   * Pre-built provider instance. When supplied, the client delegates to
-   * this provider directly and Copilot-specific options are ignored.
+   * Pre-built provider instance. The client delegates to this provider
+   * directly. A provider is required.
    */
   provider?: SquadProvider;
 
   /**
-   * Path to the Copilot CLI executable.
-   * Defaults to bundled CLI from @github/copilot package.
-   * Only used when no `provider` is supplied (CopilotProvider default).
+   * Path to the CLI executable.
    */
   cliPath?: string;
 
@@ -183,9 +180,8 @@ export class SquadClient {
   /**
    * Creates a new SquadClient instance.
    *
-   * When `options.provider` is supplied, the client delegates to it directly.
-   * Otherwise, a CopilotProvider is lazily constructed from the remaining
-   * options (backward-compatible default).
+   * A provider must be supplied via `options.provider`; the client delegates
+   * to it directly. Copilot compatibility is disabled in this environment.
    */
   constructor(options: SquadClientOptions = {}) {
     this.options = {
@@ -197,26 +193,13 @@ export class SquadClient {
       useStdio: options.useStdio ?? true,
     };
 
-    if (options.provider) {
-      this.provider = options.provider;
-    } else {
-      // Lazy-import CopilotProvider to avoid pulling in @github/copilot-sdk
-      // when a different provider is supplied.
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { CopilotProvider } = require('./providers/copilot-provider.js');
-      this.provider = new CopilotProvider({
-        cliPath: options.cliPath,
-        cliArgs: options.cliArgs,
-        cwd: options.cwd,
-        port: options.port,
-        useStdio: options.useStdio,
-        cliUrl: options.cliUrl,
-        logLevel: options.logLevel,
-        env: options.env,
-        githubToken: options.githubToken,
-        useLoggedInUser: options.useLoggedInUser,
-      });
+    if (!options.provider) {
+      throw new Error(
+        'No provider supplied. In this environment, Copilot compatibility is disabled, so a provider must be explicitly specified.',
+      );
     }
+
+    this.provider = options.provider;
   }
 
   /** Get the current connection state. */

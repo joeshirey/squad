@@ -235,7 +235,7 @@ function createNoopAdapter(): ReturnType<typeof createPlatformAdapter> {
 async function checkAgentCli(agentCmd?: string): Promise<void> {
   const cmd = resolveAgentCmd(agentCmd);
   return new Promise<void>((resolve, reject) => {
-    execFile(cmd, ['--version'], (err) => {
+    execFile(cmd, ['--version'], { shell: process.platform === 'win32', timeout: 5000 }, (err) => {
       if (err) reject(err);
       else resolve();
     });

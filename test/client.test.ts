@@ -24,10 +24,19 @@ vi.mock('@github/copilot-sdk', () => ({
   }),
 }));
 
+const mockProvider = {
+  name: "mock" as const,
+  isConnected: () => true,
+  connect: async () => {},
+  disconnect: async () => [],
+  createSession: async () => ({} as any),
+};
+
 describe('SquadClientWithPool', () => {
   it('should construct with pool config', () => {
     const client = new SquadClientWithPool({
-      pool: { maxConcurrent: 5 }
+      pool: { maxConcurrent: 5 },
+      provider: mockProvider,
     });
     expect(client).toBeDefined();
     expect(client.pool).toBeDefined();
@@ -36,14 +45,15 @@ describe('SquadClientWithPool', () => {
 
   it('should have pool with correct capacity', () => {
     const client = new SquadClientWithPool({
-      pool: { maxConcurrent: 3 }
+      pool: { maxConcurrent: 3 },
+      provider: mockProvider,
     });
     expect(client.pool.size).toBe(0);
     expect(client.pool.atCapacity).toBe(false);
   });
 
   it('should check connection state', () => {
-    const client = new SquadClientWithPool();
+    const client = new SquadClientWithPool({ provider: mockProvider });
     expect(client.isConnected()).toBe(false);
     expect(client.getState()).toBe('disconnected');
   });

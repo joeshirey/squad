@@ -596,6 +596,9 @@ function legacyToConfig(options: WatchOptions): WatchConfig {
     maxConcurrent: options.maxConcurrent ?? 1,
     timeout: options.issueTimeoutMinutes ?? 30,
     agentFlags: options.agentFlags,
+    // Default to --yolo when execute mode is active — copilot CLI hangs in
+    // non-interactive mode without permission flags.
+    copilotFlags: (options as any).copilotFlags ?? options.agentFlags ?? (options.execute ? '--yolo' : undefined),
     agentCmd: options.agentCmd,
     capabilities,
   };

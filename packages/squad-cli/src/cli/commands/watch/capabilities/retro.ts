@@ -3,24 +3,11 @@
  */
 
 import path from 'node:path';
-import { execFile } from 'node:child_process';
 import { FSStorageProvider } from '@bradygaster/squad-sdk';
 import type { WatchCapability, WatchContext, PreflightResult, CapabilityResult } from '../types.js';
-import { buildAgentCommand } from '../../../core/detect-agent-cli.js';
+import { buildAgentCommand, spawnWithTimeout } from '../agent-spawn.js';
 
 const storage = new FSStorageProvider();
-function spawnWithTimeout(cmd: string, args: string[], cwd: string, timeoutMs: number): Promise<void> {
-  return new Promise<void>((resolve, reject) => {
-    execFile(cmd, args, { cwd, timeout: timeoutMs, maxBuffer: 50 * 1024 * 1024, shell: true }, (err) => {
-      if (err) {
-        const execErr = err as Error & { killed?: boolean };
-        reject(new Error(execErr.killed ? `Timed out after ${Math.round(timeoutMs / 1000)}s` : execErr.message));
-      } else {
-        resolve();
-      }
-    });
-  });
-}
 
 export class RetroCapability implements WatchCapability {
   readonly name = 'retro';

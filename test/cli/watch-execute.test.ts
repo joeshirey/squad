@@ -26,7 +26,7 @@ describe('CLI: watch execute mode', () => {
 
       const { cmd, args } = buildAgentCommand(issue, teamRoot, options);
 
-      expect(cmd).toBe('copilot');
+      expect(cmd).toBe('claude');
       expect(args).toContain('-p');
       expect(args.some((a) => a.includes('issue #42'))).toBe(true);
     });
@@ -44,7 +44,7 @@ describe('CLI: watch execute mode', () => {
 
       const { cmd, args } = buildAgentCommand(issue, teamRoot, options);
 
-      expect(cmd).toBe('copilot');
+      expect(cmd).toBe('claude');
       expect(args).toContain('--model');
       expect(args).toContain('gpt-4');
       expect(args).toContain('--yolo');

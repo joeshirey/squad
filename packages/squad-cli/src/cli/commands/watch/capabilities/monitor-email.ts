@@ -4,20 +4,7 @@
 
 import { execFile } from 'node:child_process';
 import type { WatchCapability, WatchContext, PreflightResult, CapabilityResult } from '../types.js';
-import { buildAgentCommand } from '../../../core/detect-agent-cli.js';
-
-function spawnWithTimeout(cmd: string, args: string[], cwd: string, timeoutMs: number): Promise<void> {
-  return new Promise<void>((resolve, reject) => {
-    execFile(cmd, args, { cwd, timeout: timeoutMs, maxBuffer: 50 * 1024 * 1024, shell: true }, (err) => {
-      if (err) {
-        const execErr = err as Error & { killed?: boolean };
-        reject(new Error(execErr.killed ? `Timed out after ${Math.round(timeoutMs / 1000)}s` : execErr.message));
-      } else {
-        resolve();
-      }
-    });
-  });
-}
+import { buildAgentCommand, spawnWithTimeout, IS_WINDOWS } from '../agent-spawn.js';
 
 export class MonitorEmailCapability implements WatchCapability {
   readonly name = 'monitor-email';
@@ -30,7 +17,7 @@ export class MonitorEmailCapability implements WatchCapability {
     // If using custom agentCmd, skip copilot check
     if (context.agentCmd) return { ok: true };
     return new Promise((resolve) => {
-      execFile('copilot', ['--version'], { shell: true, timeout: 5000 }, (err) => {
+      execFile('copilot', ['--version'], { shell: IS_WINDOWS, timeout: 5000 }, (err) => {
         if (err) {
           resolve({
             ok: false,

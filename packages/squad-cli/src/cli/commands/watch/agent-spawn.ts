@@ -11,9 +11,40 @@
 
 import { execFile, execFileSync } from 'node:child_process';
 import type { WatchContext } from './types.js';
+import { buildAgentCommand as coreBuildAgentCommand } from '../../core/detect-agent-cli.js';
 
 /** True when running on Windows — used to gate `shell: true`. */
 export const IS_WINDOWS = process.platform === 'win32';
+
+/**
+ * Escape an argument for safe use with cmd.exe when `shell: true`.
+ *
+ * Node's `execFile` with `shell: true` on Windows concatenates args with
+ * spaces but does NOT quote them (Node DEP0190). This means multi-word
+ * prompts get split by cmd.exe and the child process receives garbage argv.
+ *
+ * This function wraps any arg containing spaces, quotes, or cmd.exe
+ * metacharacters in double quotes with internal double quotes escaped.
+ *
+ * On non-Windows (shell: false path), args are passed directly to execvp
+ * without shell interpretation, so no escaping is needed.
+ */
+export function escapeForCmd(arg: string): string {
+  // Characters that require quoting in cmd.exe
+  if (!/[\s"&|<>^%!()]/.test(arg)) return arg;
+  // Escape internal double quotes by doubling them (cmd.exe convention)
+  const escaped = arg.replace(/"/g, '""');
+  return `"${escaped}"`;
+}
+
+/**
+ * Escape an array of args for cmd.exe shell invocation.
+ * Only applies on Windows — returns args unchanged on other platforms.
+ */
+export function escapeArgs(args: string[]): string[] {
+  if (!IS_WINDOWS) return args;
+  return args.map(escapeForCmd);
+}
 
 /**
  * Cached result of copilot CLI detection.
@@ -60,37 +91,25 @@ export function _resetCopilotDetection(): void {
 /**
  * Build the command + args array for an agent invocation.
  *
- * Resolution order:
- *   1. `context.agentCmd` (explicit override from config / CLI)
- *   2. Runtime detection via `resolveCopilotCmd()`:
- *      - standalone `copilot` if available on PATH
- *      - `gh copilot` as fallback
+ * Delegated to the fork's centralized multi-provider resolution.
  */
 export function buildAgentCommand(
   prompt: string,
   context: WatchContext,
 ): { cmd: string; args: string[] } {
-  if (context.agentCmd) {
-    const parts = context.agentCmd.trim().split(/\s+/);
-    const cmd = parts[0]!;
-    const args = [...parts.slice(1), '--message', prompt];
-    return { cmd, args };
-  }
-
-  // Default: detect available copilot CLI at runtime (cached)
-  const { cmd, cmdPrefix } = resolveCopilotCmd();
-  const args = [...cmdPrefix, '--message', prompt];
-  if (context.copilotFlags) {
-    args.push(...context.copilotFlags.trim().split(/\s+/));
-  }
-  return { cmd, args };
+  return coreBuildAgentCommand(prompt, {
+    agentCmd: context.agentCmd,
+    agentFlags: context.agentFlags ?? context.copilotFlags,
+    teamRoot: context.teamRoot,
+  });
 }
 
 /**
  * Spawn an agent command with a timeout.
  *
  * Uses `shell: true` on Windows so that `.cmd`/`.bat` wrappers and
- * PATH resolution work correctly.
+ * PATH resolution work correctly.  Args are escaped via `escapeArgs()`
+ * to prevent Node DEP0190 and cmd.exe metacharacter injection.
  */
 export function spawnWithTimeout(
   cmd: string,
@@ -98,8 +117,9 @@ export function spawnWithTimeout(
   cwd: string,
   timeoutMs: number,
 ): Promise<void> {
+  const safeArgs = escapeArgs(args);
   return new Promise<void>((resolve, reject) => {
-    execFile(cmd, args, {
+    execFile(cmd, safeArgs, {
       cwd,
       timeout: timeoutMs,
       maxBuffer: 50 * 1024 * 1024,
@@ -130,10 +150,11 @@ export function spawnAgent(
   cwd: string,
   timeoutMs: number,
 ): Promise<{ success: boolean; error?: string }> {
+  const safeArgs = escapeArgs(args);
   return new Promise<{ success: boolean; error?: string }>((resolve) => {
     execFile(
       cmd,
-      args,
+      safeArgs,
       {
         cwd,
         timeout: timeoutMs,
