@@ -180,8 +180,9 @@ export class SquadClient {
   /**
    * Creates a new SquadClient instance.
    *
-   * A provider must be supplied via `options.provider`; the client delegates
-   * to it directly. Copilot compatibility is disabled in this environment.
+   * When `options.provider` is supplied, the client delegates to it directly.
+   * Otherwise, a CopilotProvider is lazily constructed from the remaining
+   * options (backward-compatible default).
    */
   constructor(options: SquadClientOptions = {}) {
     this.options = {
@@ -193,13 +194,26 @@ export class SquadClient {
       useStdio: options.useStdio ?? true,
     };
 
-    if (!options.provider) {
-      throw new Error(
-        'No provider supplied. In this environment, Copilot compatibility is disabled, so a provider must be explicitly specified.',
-      );
+    if (options.provider) {
+      this.provider = options.provider;
+    } else {
+      // Lazy-import CopilotProvider to avoid pulling in @github/copilot-sdk
+      // when a different provider is supplied.
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { CopilotProvider } = require('./providers/copilot-provider.js');
+      this.provider = new CopilotProvider({
+        cliPath: options.cliPath,
+        cliArgs: options.cliArgs,
+        cwd: options.cwd,
+        port: options.port,
+        useStdio: options.useStdio,
+        cliUrl: options.cliUrl,
+        logLevel: options.logLevel,
+        env: options.env,
+        githubToken: options.githubToken,
+        useLoggedInUser: options.useLoggedInUser,
+      });
     }
-
-    this.provider = options.provider;
   }
 
   /** Get the current connection state. */

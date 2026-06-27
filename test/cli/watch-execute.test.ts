@@ -11,6 +11,15 @@ import type { WatchWorkItem } from '../../packages/squad-cli/src/cli/commands/wa
 import { classifyIssue } from '../../packages/squad-cli/src/cli/commands/watch/capabilities/execute.js';
 import type { ExecutableWorkItem } from '../../packages/squad-cli/src/cli/commands/watch/capabilities/execute.js';
 
+vi.mock('../../packages/squad-cli/src/cli/core/detect-agent-cli.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../packages/squad-cli/src/cli/core/detect-agent-cli.js')>();
+  return {
+    ...actual,
+    detectAgentCli: () => ({ cmd: 'claude', name: 'Claude Code' }),
+    resolveAgentCmd: (agentCmd?: string) => agentCmd ? agentCmd.trim().split(/\s+/)[0]! : 'claude',
+  };
+});
+
 describe('CLI: watch execute mode', () => {
   describe('buildAgentCommand', () => {
     it('builds default gh copilot command', async () => {

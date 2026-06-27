@@ -50,6 +50,7 @@ export function resolveProviderType(
 function mapConfigType(raw: string): ProviderType | undefined {
   const normalized = raw.toLowerCase().trim();
   const valid: ProviderType[] = [
+    'copilot',
     'anthropic',
     'anthropic-vertex',
     'google',
@@ -73,7 +74,8 @@ export async function createProvider(
 ): Promise<SquadProvider> {
   switch (providerType) {
     case 'copilot': {
-      throw new Error('Copilot provider is disabled/removed in this configuration.');
+      const { CopilotProvider } = await import('./providers/copilot-provider.js');
+      return new CopilotProvider(clientOptions);
     }
     case 'anthropic': {
       const { AnthropicProvider } = await import('./providers/anthropic-provider.js');
